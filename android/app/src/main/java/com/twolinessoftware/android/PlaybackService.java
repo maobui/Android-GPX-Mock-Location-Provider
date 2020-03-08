@@ -16,7 +16,6 @@
 package com.twolinessoftware.android;
 
 import android.app.Notification;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
@@ -29,6 +28,7 @@ import android.os.RemoteException;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 import com.twolinessoftware.android.framework.service.comms.gpx.GpxSaxParser;
 import com.twolinessoftware.android.framework.service.comms.gpx.GpxSaxParserListener;
@@ -45,12 +45,13 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 
-public class PlaybackService extends Service implements GpxSaxParserListener {
+import static com.twolinessoftware.android.MainApplication.NOTIFICATION_CHANNEL_ID_DEFAULT;
+
+public class PlaybackService extends Service implements GpxSaxParserListener, SendLocationWorkerQueue.SendLocationWorkerCallback {
     private static final String TAG = PlaybackService.class.getSimpleName();
 
-    private NotificationManager mNM;
-    private static final String NOTIFICATION_CHANNEL_ID_DEFAULT = "default";
-    private static final int NOTIFICATION = 1;
+    private NotificationManagerCompat mNotificationManager;
+    private static final int NOTIFICATION_ID = 1;
 
     private ArrayList<GpxTrackPoint> pointList = new ArrayList<GpxTrackPoint>();
     public static final boolean CONTINUOUS = true;
@@ -61,7 +62,8 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
     private static final String PROVIDER_NAME = LocationManager.GPS_PROVIDER;
 
     private GpxTrackPoint lastPoint;
-    long delayTimeOnReplay = 0;
+    private long delayTimeOnReplay = 0;
+    private GpxTrackPoint currentPointWorker;
 
     private final IPlaybackService.Stub mBinder = new IPlaybackService.Stub() {
 
@@ -95,7 +97,6 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
             broadcastStateChange(PAUSED);
             queue.pause();
 
-            GpxTrackPoint currentPointWorker = queue.getCurrentPointWorker();
             if (currentPointWorker != null) {
                 Log.d(TAG, "Sending Point at pause  !!!!!!! " + currentPointWorker.getLat() + " - " + currentPointWorker.getLon() + " speed : " + currentPointWorker.getSpeed());
                 for (int i = 0; i < QUEUE_PAUSE_SIZE; i++) {
@@ -118,8 +119,8 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
         }
 
         @Override
-        public void updateDelayTime(long timeInMilliseconds){
-            if(state == PAUSED) {
+        public void updateDelayTime(long timeInMilliseconds) {
+            if (state == PAUSED) {
                 Log.e(TAG, "Updating Delay Time Playback Service");
                 queue.updateDelayTime(timeInMilliseconds);
             }
@@ -142,10 +143,10 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
 
     @Override
     public void onCreate() {
-        mNM = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        mNotificationManager = NotificationManagerCompat.from(this);
         mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        queue = new SendLocationWorkerQueue();
-        queuePause = new SendLocationWorkerQueue();
+        queue = new SendLocationWorkerQueue(this);
+        queuePause = new SendLocationWorkerQueue(this);
         broadcastStateChange(STOPPED);
         //setupTestProvider();
         processing = false;
@@ -194,8 +195,11 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
             cancelExistingTaskIfNecessary();
             task = new ReadFileTask(file);
             task.execute(null, null);
+
+            // In this sample, we'll use the same text for the ticker and the expanded notification
+            String text = getString(R.string.push_content_default);
             // Display a notification about us starting.  We put an icon in the status bar.
-            showNotification();
+            showNotification(text);
         }
 
     }
@@ -209,7 +213,7 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
     private void onGpsPlaybackStopped() {
         broadcastStateChange(STOPPED);
         // Cancel the persistent notification.
-        mNM.cancel(NOTIFICATION);
+        mNotificationManager.cancel(NOTIFICATION_ID);
         disableGpsProvider();
     }
 
@@ -240,24 +244,25 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
     /**
      * Show a notification while this service is running.
      */
-    private void showNotification() {
-        // In this sample, we'll use the same text for the ticker and the expanded notification
-        CharSequence text = "GPX Playback Running";
-
+    private void showNotification(String contentMessage) {
         // The PendingIntent to launch our activity if the user selects this notification
         PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
                 new Intent(this, MainActivity.class), 0);
 
         final Notification notification = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID_DEFAULT)
-                .setSmallIcon(R.drawable.ic_playback_running)
-                .setContentText(text)
+                .setSmallIcon(R.drawable.ic_playback_location_black_24dp)
+                .setContentText(contentMessage)
                 .setWhen(System.currentTimeMillis())
                 .setContentIntent(contentIntent)
-                .setContentTitle("GPX Playback Manager")
+                .setContentTitle(getString(R.string.chanel_description))
+//                .setStyle(new NotificationCompat.InboxStyle()
+//                        .addLine("Much longer text that cannot fit one line...")
+//                        .addLine("Much longer text that cannot fit one line..."))
+                .setPriority(NotificationCompat.PRIORITY_LOW)
                 .build();
 
         // Send the notification.
-        mNM.notify(NOTIFICATION, notification);
+        mNotificationManager.notify(NOTIFICATION_ID, notification);
     }
 
     private String loadFile(String file) {
@@ -415,5 +420,27 @@ public class PlaybackService extends Service implements GpxSaxParserListener {
                     break;
             }
         }
+
+    }
+
+    @Override
+    public void onSendLocation(GpxTrackPoint point) {
+        currentPointWorker = point;
+        String status = "";
+        switch (state) {
+            case RUNNING:
+            case RESUME:
+                status = "RUNNING";
+                break;
+            case PAUSED:
+                status = "PAUSED";
+                break;
+            case STOPPED:
+                status = "STOPPED";
+                break;
+        }
+        String contentMessage =  status + " speed: "
+                + String.format("%.02f",point.getSpeed()) + " location: " + point.getLat() + " - " + point.getLon();
+        showNotification(contentMessage);
     }
 }

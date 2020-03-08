@@ -22,5 +22,8 @@
     <string name="resume_playback">Resume Playback</string>
     <string name="stop_playback">Stop Playback</string>
     <string name="input_playback_delay_milliseconds">Input Playback Delay (milliseconds):</string>
+    <string name="chanel_name">Chanel Name</string>
+    <string name="chanel_description">GPX Playback Manager</string>
+    <string name="push_content_default">GPX Playback Running</string>
 
 </resources>
