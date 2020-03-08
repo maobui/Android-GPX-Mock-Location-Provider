@@ -21,6 +21,12 @@ interface IPlaybackService{
 	
 	void stopService();
 	
-	int getState(); 
-	
+	int getState();
+
+	void pause();
+
+	void resume();
+
+	void updateDelayTime(long timeInMilliseconds);
+
 }
