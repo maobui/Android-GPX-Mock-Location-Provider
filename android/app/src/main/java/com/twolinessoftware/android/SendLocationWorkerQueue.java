@@ -27,15 +27,15 @@ public class SendLocationWorkerQueue {
     private boolean running;
     private boolean pause;
     private WorkerThread thread;
-    private SendLocationWorkerCallback sendLocationWorkerCallback;
+    private SendLocationWorkerQueueCallback mSendLocationWorkerQueueCallback;
 
     private Object lock = new Object();
 
-    public SendLocationWorkerQueue(SendLocationWorkerCallback callback) {
+    public SendLocationWorkerQueue(SendLocationWorkerQueueCallback callback) {
         queue = new LinkedList<>();
         running = false;
         pause = false;
-        sendLocationWorkerCallback = callback;
+        mSendLocationWorkerQueueCallback = callback;
     }
 
 
@@ -118,7 +118,7 @@ public class SendLocationWorkerQueue {
             while (running) {
                 if (queue.size() > 0) {
                     SendLocationWorker worker = queue.pop();
-                    sendLocationWorkerCallback.onSendLocation(worker.getPoint());
+                    mSendLocationWorkerQueueCallback.onSendLocation(worker.getPoint());
                     synchronized (lock) {
                         while (pause) {
                             try {
@@ -137,6 +137,8 @@ public class SendLocationWorkerQueue {
                     }
                     // Executing each worker in the current thread. Multiple threads NOT created.
                     worker.run();
+                } else {
+                    mSendLocationWorkerQueueCallback.onEndSendLocation();
                 }
             }
         }
@@ -146,7 +148,8 @@ public class SendLocationWorkerQueue {
         }
     }
 
-    public interface SendLocationWorkerCallback {
+    public interface SendLocationWorkerQueueCallback {
         void onSendLocation(GpxTrackPoint point);
+        void onEndSendLocation();
     }
 }

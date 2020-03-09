@@ -47,13 +47,13 @@ import java.util.Date;
 
 import static com.twolinessoftware.android.MainApplication.NOTIFICATION_CHANNEL_ID_DEFAULT;
 
-public class PlaybackService extends Service implements GpxSaxParserListener, SendLocationWorkerQueue.SendLocationWorkerCallback {
+public class PlaybackService extends Service implements GpxSaxParserListener, SendLocationWorkerQueue.SendLocationWorkerQueueCallback {
     private static final String TAG = PlaybackService.class.getSimpleName();
 
     private NotificationManagerCompat mNotificationManager;
     private static final int NOTIFICATION_ID = 1;
 
-    private ArrayList<GpxTrackPoint> pointList = new ArrayList<GpxTrackPoint>();
+    private ArrayList<GpxTrackPoint> pointList = new ArrayList<>();
     public static final boolean CONTINUOUS = true;
     public static final int RUNNING = 0;
     public static final int STOPPED = 1;
@@ -330,7 +330,6 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
         if (state == RUNNING) {
             if (delay > 0) {
                 Log.d(TAG, "Sending Point in:" + (delay - System.currentTimeMillis()) + "ms");
-
                 SendLocationWorker worker = new SendLocationWorker(mLocationManager, item, PROVIDER_NAME, delay);
                 queue.addToQueue(worker);
             } else {
@@ -440,8 +439,24 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
                 status = "STOPPED";
                 break;
         }
-        String contentMessage =  status + " speed: "
-                + String.format("%.02f",point.getSpeed()) + " location: " + point.getLat() + " - " + point.getLon();
+        String contentMessage = String.format(getString(R.string.push_content_with_status), status, String.format("%.02f", point.getSpeed()), point.getLat(), point.getLon());
         showNotification(contentMessage);
+    }
+
+    @Override
+    public void onEndSendLocation() {
+        Log.e(TAG, "onEndSendLocation");
+        if (state != STOPPED) {
+            // Stop at last point in gpx (speed to zero) before stop service.
+            currentPointWorker.setSpeed(0.0);
+            SendLocationWorker worker = new SendLocationWorker(mLocationManager, currentPointWorker, PROVIDER_NAME, System.currentTimeMillis());
+            worker.run();
+
+            try {
+                mBinder.stopService();
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

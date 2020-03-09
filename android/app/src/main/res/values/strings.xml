@@ -25,5 +25,6 @@
     <string name="chanel_name">Chanel Name</string>
     <string name="chanel_description">GPX Playback Manager</string>
     <string name="push_content_default">GPX Playback Running</string>
+    <string name="push_content_with_status">%s Speed: %s (%f,%f)</string>
 
 </resources>

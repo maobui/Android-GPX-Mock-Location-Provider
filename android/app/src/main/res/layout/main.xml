@@ -52,7 +52,7 @@
             android:layout_toRightOf="@+id/label_edit_text_delay"
             android:imeOptions="actionNext"
             android:inputType="number"
-            android:text="1000">
+            android:text="100">
 
             <requestFocus />
         </EditText>
@@ -70,25 +70,31 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:checked="true"
-            android:text="1000" />
-
-        <RadioButton
-            android:id="@+id/radioButton_1x"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="1500" />
+            android:text="100" />
 
         <RadioButton
             android:id="@+id/radioButton_2x"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="2000" />
+            android:text="200" />
 
         <RadioButton
-            android:id="@+id/radioButton_3x"
+            android:id="@+id/radioButton_5x"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="3000" />
+            android:text="500" />
+
+        <RadioButton
+            android:id="@+id/radioButton_10x"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1000" />
+
+        <RadioButton
+            android:id="@+id/radioButton_20x"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="2000" />
     </RadioGroup>
 
     <Button
