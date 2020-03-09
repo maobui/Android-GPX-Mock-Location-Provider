@@ -434,6 +434,7 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
                 break;
             case PAUSED:
                 status = "PAUSED";
+                currentPointWorker.setSpeed(0.0);
                 break;
             case STOPPED:
                 status = "STOPPED";
