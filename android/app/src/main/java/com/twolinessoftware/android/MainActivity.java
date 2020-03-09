@@ -44,6 +44,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.twolinessoftware.android.framework.util.Logger;
 import com.twolinessoftware.android.util.LocationUtil;
@@ -77,8 +78,8 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
     private EditText mEditTextDelay;
     private RadioGroup mRadioGroupDelay;
     private RadioButton mRadioButtonChecked;
-    private Button mButtonStart;
-    private Button mButtonStop;
+    private MaterialButton mButtonStart;
+    private MaterialButton mButtonStop;
 
     private String filepath;
     private String delayTimeOnReplay = "";
@@ -134,6 +135,10 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
                 updateDelayTimePlayService(Long.parseLong(delayTimeOnReplay));
             }
         });
+
+        // Init delayTimeOnReplay from radio group.
+        delayTimeOnReplay = ((RadioButton)findViewById(mRadioGroupDelay.getCheckedRadioButtonId())).getText().toString();
+        mEditTextDelay.setText(delayTimeOnReplay);
 
         String fileName = getGpxFilePath();
         if(fileName != null) {
@@ -338,6 +343,7 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
                     mEditTextDelay.setEnabled(false);
                     enableRadioGroupDelay(false);
                     mButtonStart.setText(getString(R.string.pause_playback));
+                    mButtonStart.setIconResource(R.drawable.ic_pause);
                     mButtonStart.setEnabled(true);
                     mButtonStop.setEnabled(true);
                     break;
@@ -347,6 +353,7 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
                     mEditTextDelay.setEnabled(true);
                     enableRadioGroupDelay(true);
                     mButtonStart.setText(getString(R.string.start_playback));
+                    mButtonStart.setIconResource(R.drawable.ic_play);
                     mButtonStart.setEnabled(true);
                     mButtonStop.setEnabled(false);
                     break;
@@ -354,6 +361,7 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
                     mEditTextDelay.setEnabled(true);
                     enableRadioGroupDelay(true);
                     mButtonStart.setText(getString(R.string.resume_playback));
+                    mButtonStart.setIconResource(R.drawable.ic_play);
                     mButtonStart.setEnabled(true);
                     mButtonStop.setEnabled(true);
                     break;

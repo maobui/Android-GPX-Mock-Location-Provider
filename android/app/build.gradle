@@ -25,7 +25,9 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     testImplementation 'junit:junit:4.12'
+    implementation 'androidx.core:core:1.2.0'
     implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation "androidx.media:media:1.1.0"
     implementation 'com.google.android.material:material:1.1.0'
     implementation 'com.vividsolutions:jts:1.13'
 }

@@ -27,15 +27,15 @@ public class SendLocationWorkerQueue {
     private boolean running;
     private boolean pause;
     private WorkerThread thread;
-    private GpxTrackPoint currentPointWorker;
+    private SendLocationWorkerQueueCallback mSendLocationWorkerQueueCallback;
 
     private Object lock = new Object();
 
-    public SendLocationWorkerQueue() {
+    public SendLocationWorkerQueue(SendLocationWorkerQueueCallback callback) {
         queue = new LinkedList<>();
         running = false;
         pause = false;
-        currentPointWorker = null;
+        mSendLocationWorkerQueueCallback = callback;
     }
 
 
@@ -99,10 +99,6 @@ public class SendLocationWorkerQueue {
         return queue.size();
     }
 
-    public GpxTrackPoint getCurrentPointWorker() {
-        return currentPointWorker;
-    }
-
     public synchronized void updateDelayTime(long timeInMilliseconds){
         synchronized (lock){
             if(thread != null)
@@ -122,7 +118,7 @@ public class SendLocationWorkerQueue {
             while (running) {
                 if (queue.size() > 0) {
                     SendLocationWorker worker = queue.pop();
-                    currentPointWorker = worker.getPoint();
+                    mSendLocationWorkerQueueCallback.onSendLocation(worker.getPoint());
                     synchronized (lock) {
                         while (pause) {
                             try {
@@ -141,6 +137,8 @@ public class SendLocationWorkerQueue {
                     }
                     // Executing each worker in the current thread. Multiple threads NOT created.
                     worker.run();
+                } else {
+                    mSendLocationWorkerQueueCallback.onEndSendLocation();
                 }
             }
         }
@@ -148,5 +146,10 @@ public class SendLocationWorkerQueue {
         public void updateDelayTimeOnReplay(long timeInMilliseconds ) {
             TIME_BETWEEN_SENDS = timeInMilliseconds;
         }
+    }
+
+    public interface SendLocationWorkerQueueCallback {
+        void onSendLocation(GpxTrackPoint point);
+        void onEndSendLocation();
     }
 }
