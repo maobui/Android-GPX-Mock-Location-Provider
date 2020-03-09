@@ -26,5 +26,9 @@
     <string name="chanel_description">GPX Playback Manager</string>
     <string name="push_content_default">GPX Playback Running</string>
     <string name="push_content_with_status">%s Speed: %s (%f,%f)</string>
+    <string name="push_action_title_launch">Launch</string>
+    <string name="push_action_title_resume">Resume</string>
+    <string name="push_action_title_stop">Stop</string>
+    <string name="push_action_title_pause">Pause</string>
 
 </resources>

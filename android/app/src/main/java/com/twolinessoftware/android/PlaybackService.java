@@ -29,6 +29,7 @@ import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.core.content.ContextCompat;
 
 import com.twolinessoftware.android.framework.service.comms.gpx.GpxSaxParser;
 import com.twolinessoftware.android.framework.service.comms.gpx.GpxSaxParserListener;
@@ -135,6 +136,12 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
     private final int QUEUE_PAUSE_SIZE = 100;
     private boolean processing;
     private ReadFileTask task;
+    private PendingIntent launchIntent, resumeIntent, pauseIntent, stopIntent;
+    private final String ACTION_LAUNCH = "Launch";
+    private final String ACTION_PAUSE = "Pause";
+    private final String ACTION_RESUME = "Resume";
+    private final String ACTION_STOP = "Stop";
+    private final String STATUS = "Status";
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -143,6 +150,7 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
 
     @Override
     public void onCreate() {
+        Log.e(TAG, "onCreate Playback Service");
         mNotificationManager = NotificationManagerCompat.from(this);
         mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         queue = new SendLocationWorkerQueue(this);
@@ -150,12 +158,63 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
         broadcastStateChange(STOPPED);
         //setupTestProvider();
         processing = false;
+
+        // The PendingIntent to launch our activity if the user selects this notification
+        launchIntent = PendingIntent.getActivity(
+                this,
+                0,
+                new Intent(this, MainActivity.class)
+                        .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP),
+                0);
+
+        resumeIntent = PendingIntent.getService(
+                this,
+                0,
+                new Intent(this, PlaybackService.class)
+                        .setAction(ACTION_RESUME)
+                        .putExtra(STATUS, PlaybackService.RESUME),
+                PendingIntent.FLAG_UPDATE_CURRENT);
+        pauseIntent = PendingIntent.getService(
+                this,
+                0,
+                new Intent(this, PlaybackService.class)
+                        .setAction(ACTION_PAUSE)
+                        .putExtra(STATUS, PlaybackService.PAUSED),
+                PendingIntent.FLAG_UPDATE_CURRENT);
+        stopIntent = PendingIntent.getService(
+                this,
+                0,
+                new Intent(this, PlaybackService.class)
+                        .setAction(ACTION_STOP)
+                        .putExtra(STATUS, PlaybackService.STOPPED),
+                PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d(TAG, "Starting Playback Service");
-
+        Log.e(TAG, "Starting Playback Service");
+        String action = intent.getAction();
+        int status = intent.getIntExtra(STATUS, -1);
+        Log.e(TAG, "------------------ " + action + " : " + status);
+        if (ACTION_PAUSE.equalsIgnoreCase(action)) {
+            try {
+                mBinder.pause();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else if (ACTION_RESUME.equalsIgnoreCase(action)) {
+            try {
+                mBinder.resume();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else if (ACTION_STOP.equalsIgnoreCase(action)) {
+            try {
+                mBinder.stopService();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         String timeFromIntent = null;
         try {
             timeFromIntent = intent.getStringExtra("delayTimeOnReplay");
@@ -245,21 +304,49 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
      * Show a notification while this service is running.
      */
     private void showNotification(String contentMessage) {
-        // The PendingIntent to launch our activity if the user selects this notification
-        PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
-                new Intent(this, MainActivity.class), 0);
-
-        final Notification notification = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID_DEFAULT)
-                .setSmallIcon(R.drawable.ic_playback_location_black_24dp)
-                .setContentText(contentMessage)
-                .setWhen(System.currentTimeMillis())
-                .setContentIntent(contentIntent)
-                .setContentTitle(getString(R.string.chanel_description))
-//                .setStyle(new NotificationCompat.InboxStyle()
-//                        .addLine("Much longer text that cannot fit one line...")
-//                        .addLine("Much longer text that cannot fit one line..."))
-                .setPriority(NotificationCompat.PRIORITY_LOW)
-                .build();
+        final Notification notification;
+        if (state == PAUSED) {
+            notification = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID_DEFAULT)
+                    // Show controls on lock screen even when user hides sensitive content.
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                    .setSmallIcon(R.drawable.ic_playback_location)
+                    .setContentText(contentMessage)
+                    .setWhen(System.currentTimeMillis())
+                    //.setContentIntent(contentIntent)
+                    .setContentTitle(getString(R.string.chanel_description))
+                    /*.setStyle(new NotificationCompat.InboxStyle()
+                            .addLine("Much longer text that cannot fit one line...")
+                            .addLine("Much longer text that cannot fit one line..."))*/
+                    // Add media control buttons that invoke intents in your media service
+                    .addAction(R.drawable.ic_play, getString(R.string.push_action_title_resume), resumeIntent) // #0
+                    .addAction(R.drawable.ic_stop, getString(R.string.push_action_title_stop), stopIntent)  // #1
+                    .addAction(R.drawable.ic_launch, getString(R.string.push_action_title_launch), launchIntent)  // #2
+                    .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
+                            .setShowActionsInCompactView(0, 1, 2))
+                    .setPriority(NotificationCompat.PRIORITY_LOW)
+                    .build();
+        } else {
+            notification = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID_DEFAULT)
+                    // Show controls on lock screen even when user hides sensitive content.
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                    .setSmallIcon(R.drawable.ic_playback_location)
+                    .setContentText(contentMessage)
+                    .setWhen(System.currentTimeMillis())
+                    //.setContentIntent(contentIntent)
+                    .setContentTitle(getString(R.string.chanel_description))
+                    /*.setStyle(new NotificationCompat.InboxStyle()
+                            .addLine("Much longer text that cannot fit one line...")
+                            .addLine("Much longer text that cannot fit one line..."))*/
+                    // Add media control buttons that invoke intents in your media service
+                    .addAction(R.drawable.ic_pause, getString(R.string.push_action_title_pause), pauseIntent)  // #0
+                    .addAction(R.drawable.ic_stop, getString(R.string.push_action_title_stop), stopIntent)  // #1
+                    .addAction(R.drawable.ic_launch, getString(R.string.push_action_title_launch), launchIntent)  // #2
+                    .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
+                            .setShowActionsInCompactView(0, 1, 2))
+                    .setColor(ContextCompat.getColor(this, R.color.colorPrimary))
+                    .setPriority(NotificationCompat.PRIORITY_LOW)
+                    .build();
+        }
 
         // Send the notification.
         mNotificationManager.notify(NOTIFICATION_ID, notification);

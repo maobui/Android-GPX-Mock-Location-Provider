@@ -2,6 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical">
 
     <TextView
@@ -27,7 +28,7 @@
             android:id="@+id/file_manager"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/ic_folder_black_24dp"
+            android:src="@drawable/ic_folder"
 			android:tint="@color/colorYellow"/>
     </LinearLayout>
 
@@ -69,7 +70,6 @@
             android:id="@+id/radioButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:checked="true"
             android:text="100" />
 
         <RadioButton
@@ -88,6 +88,7 @@
             android:id="@+id/radioButton_10x"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:checked="true"
             android:text="1000" />
 
         <RadioButton
@@ -97,19 +98,25 @@
             android:text="2000" />
     </RadioGroup>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/start"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_gravity="center"
         android:layout_marginTop="10dp"
         android:focusableInTouchMode="true"
-        android:text="@string/start_playback" />
+        android:text="@string/start_playback"
+        style="@style/Widget.MaterialComponents.Button.Icon"
+        app:icon="@drawable/ic_play"/>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/stop"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_gravity="center"
         android:layout_marginTop="10dp"
-        android:text="@string/stop_playback" />
+        android:text="@string/stop_playback"
+        style="@style/Widget.MaterialComponents.Button.Icon"
+        app:icon="@drawable/ic_stop"/>
 
 </LinearLayout>
