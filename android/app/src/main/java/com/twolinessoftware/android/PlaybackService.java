@@ -195,6 +195,14 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.e(TAG, "Starting Playback Service");
+        /*Notification notification = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID_DEFAULT)
+                .setContentTitle("Foreground Service")
+                .setContentText("HERE")
+                .setSmallIcon(R.drawable.ic_launch)
+                .setContentIntent(launchIntent)
+                .build();
+        startForeground(1, notification);*/
+
         if(intent != null && intent.getAction() != null) {
             String action = intent.getAction();
             int status = intent.getIntExtra(STATUS, -1);
@@ -546,6 +554,15 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
     @Override
     public void onEndSendLocation() {
         Log.e(TAG, "onEndSendLocation");
+        if(state == PAUSED) {
+            try {
+                mBinder.pause();
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+            return;
+        }
+
         if (state != STOPPED) {
             // Stop at last point in gpx (speed to zero) before stop service.
             currentPointWorker.setSpeed(0.0);

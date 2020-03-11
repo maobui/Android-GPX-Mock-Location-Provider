@@ -32,7 +32,6 @@ import android.os.RemoteException;
 import android.provider.Settings;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.RadioButton;
@@ -288,7 +287,7 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
 
         Intent i = new Intent(getApplicationContext(), PlaybackService.class);
         i.putExtra("delayTimeOnReplay", delayTimeOnReplay);
-        startService(i);
+        startService(i); //ContextCompat.startForegroundService(this, i);
     }
 
     public void stopPlaybackService() {
