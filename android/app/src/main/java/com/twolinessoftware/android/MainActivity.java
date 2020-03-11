@@ -148,7 +148,7 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
             mEditText.setText(filepath);
         }
 
-        mButtonStart.setEnabled(isFile);
+        updateUi();
 
         if (!hasPermissions(APP_PERMISSIONS)) {
             requestAppPermission();
