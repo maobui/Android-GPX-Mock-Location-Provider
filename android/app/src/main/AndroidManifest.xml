@@ -20,7 +20,8 @@
             </intent-filter>
         </activity>
 
-        <service android:name="PlaybackService" />
+        <service android:name="PlaybackService"
+            android:stopWithTask="false"/>
 
         <uses-library android:name="android.test.runner" />
     </application>

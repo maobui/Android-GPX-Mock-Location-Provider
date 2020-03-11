@@ -71,8 +71,9 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
-    private ServiceConnection connection;
+//    private ServiceConnection connection;
     private IPlaybackService service;
+    private boolean mBound = false;
     private EditText mEditText;
     private ImageView mImageViewFileManager;
     private EditText mEditTextDelay;
@@ -131,22 +132,23 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
             mRadioButtonChecked = findViewById(selectId);
             delayTimeOnReplay = mRadioButtonChecked.getText().toString();
             mEditTextDelay.setText(delayTimeOnReplay);
-            if(state == PlaybackService.PAUSED) {
+            if (state == PlaybackService.PAUSED) {
                 updateDelayTimePlayService(Long.parseLong(delayTimeOnReplay));
             }
         });
 
         // Init delayTimeOnReplay from radio group.
-        delayTimeOnReplay = ((RadioButton)findViewById(mRadioGroupDelay.getCheckedRadioButtonId())).getText().toString();
+        delayTimeOnReplay = ((RadioButton) findViewById(mRadioGroupDelay.getCheckedRadioButtonId())).getText().toString();
         mEditTextDelay.setText(delayTimeOnReplay);
 
         String fileName = getGpxFilePath();
-        if(fileName != null) {
+        boolean isFile = fileName != null && new File(fileName).isFile();
+        if (isFile) {
             filepath = fileName;
             mEditText.setText(filepath);
         }
 
-        mButtonStart.setEnabled(filepath != null);
+        mButtonStart.setEnabled(isFile);
 
         if (!hasPermissions(APP_PERMISSIONS)) {
             requestAppPermission();
@@ -155,24 +157,25 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
 
     @Override
     protected void onStart() {
+        super.onStart();
         if (LocationUtil.isMockLocationEnabled(this)) {
             bindStatusListener();
             connectToService();
         } else {
             showMockLocationSettings();
         }
-        super.onStart();
     }
 
     @Override
     protected void onStop() {
-        if (LocationUtil.isMockLocationEnabled(this)) {
-            if (receiver != null)
-                unregisterReceiver(receiver);
-            try {
+        if (receiver != null)
+            unregisterReceiver(receiver);
+        try {
+            if (mBound) {
                 unbindService(connection);
-            } catch (Exception ie) {
+                mBound = false;
             }
+        } catch (Exception ie) {
         }
 
         super.onStop();
@@ -203,7 +206,7 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
 
     private void connectToService() {
         Intent i = new Intent(getApplicationContext(), PlaybackService.class);
-        connection = new PlaybackServiceConnection();
+        //connection = new PlaybackServiceConnection();
         bindService(i, connection, Context.BIND_AUTO_CREATE);
     }
 
@@ -275,7 +278,7 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
         }
 
         try {
-            if (service != null) {
+            if (service != null && mBound) {
                 service.startService(filepath);
             }
 
@@ -291,7 +294,7 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
     public void stopPlaybackService() {
 
         try {
-            if (service != null) {
+            if (service != null && mBound) {
                 saveGpxFilePath(filepath);
                 mEditText.setText(filepath);
                 service.stopService();
@@ -303,7 +306,7 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
 
     public void pausePlaybackService() {
         try {
-            if (service != null) {
+            if (service != null && mBound) {
                 service.pause();
             }
         } catch (RemoteException e) {
@@ -313,7 +316,7 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
 
     public void resumePlaybackService() {
         try {
-            if (service != null) {
+            if (service != null && mBound) {
                 service.resume();
             }
         } catch (RemoteException e) {
@@ -323,7 +326,7 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
 
     private void updateDelayTimePlayService(long timeInMilliseconds) {
         try {
-            if(service !=null) {
+            if (service != null && mBound) {
                 service.updateDelayTime(timeInMilliseconds);
             }
         } catch (RemoteException e) {
@@ -336,7 +339,7 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
             switch (state) {
                 case PlaybackService.RUNNING:
                 case PlaybackService.RESUME:
-                    if(state == PlaybackService.RUNNING) {
+                    if (state == PlaybackService.RUNNING) {
                         mEditText.setEnabled(false);
                         mImageViewFileManager.setEnabled(false);
                     }
@@ -371,14 +374,15 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
     }
 
     private void enableRadioGroupDelay(boolean isEnable) {
-        for(int i = 0; i < mRadioGroupDelay.getChildCount(); i ++) {
+        for (int i = 0; i < mRadioGroupDelay.getChildCount(); i++) {
             mRadioGroupDelay.getChildAt(i).setEnabled(isEnable);
         }
     }
 
-    class PlaybackServiceConnection implements ServiceConnection {
+    private ServiceConnection connection = new ServiceConnection() {
         public void onServiceConnected(ComponentName name, IBinder boundService) {
             service = IPlaybackService.Stub.asInterface(boundService);
+            mBound = true;
             try {
                 state = service.getState();
             } catch (RemoteException e) {
@@ -389,8 +393,9 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
 
         public void onServiceDisconnected(ComponentName name) {
             service = null;
+            mBound = false;
         }
-    }
+    };
 
     /**
      * This is called after the file manager finished.
@@ -404,7 +409,7 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
                 if (resultCode == RESULT_OK && data != null) {
                     // obtain the filename
                     Uri fileUri = data.getData();
-                    if (fileUri != null) {
+                    if (fileUri != null && new File(fileUri.getPath()).isFile()) {
                         String filePath = fileUri.getPath();
                         if (filePath != null) {
                             mEditText.setText(filePath);
