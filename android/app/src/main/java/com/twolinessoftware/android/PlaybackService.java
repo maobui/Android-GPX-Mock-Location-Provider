@@ -188,33 +188,46 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
                         .setAction(ACTION_STOP)
                         .putExtra(STATUS, PlaybackService.STOPPED),
                 PendingIntent.FLAG_UPDATE_CURRENT);
+
+        mNotificationManager.cancel(NOTIFICATION_ID);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.e(TAG, "Starting Playback Service");
-        String action = intent.getAction();
-        int status = intent.getIntExtra(STATUS, -1);
-        Log.e(TAG, "------------------ " + action + " : " + status);
-        if (ACTION_PAUSE.equalsIgnoreCase(action)) {
-            try {
-                mBinder.pause();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } else if (ACTION_RESUME.equalsIgnoreCase(action)) {
-            try {
-                mBinder.resume();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } else if (ACTION_STOP.equalsIgnoreCase(action)) {
-            try {
-                mBinder.stopService();
-            } catch (Exception e) {
-                e.printStackTrace();
+        /*Notification notification = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID_DEFAULT)
+                .setContentTitle("Foreground Service")
+                .setContentText("HERE")
+                .setSmallIcon(R.drawable.ic_launch)
+                .setContentIntent(launchIntent)
+                .build();
+        startForeground(1, notification);*/
+
+        if(intent != null && intent.getAction() != null) {
+            String action = intent.getAction();
+            int status = intent.getIntExtra(STATUS, -1);
+            Log.e(TAG, "------------------ " + action + " : " + status);
+            if (ACTION_PAUSE.equalsIgnoreCase(action)) {
+                try {
+                    mBinder.pause();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            } else if (ACTION_RESUME.equalsIgnoreCase(action)) {
+                try {
+                    mBinder.resume();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            } else if (ACTION_STOP.equalsIgnoreCase(action)) {
+                try {
+                    mBinder.stopService();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         }
+
         String timeFromIntent = null;
         try {
             timeFromIntent = intent.getStringExtra("delayTimeOnReplay");
@@ -235,7 +248,15 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
 
     @Override
     public void onDestroy() {
-        Log.d(TAG, "Stopping Playback Service");
+        Log.d(TAG, "onDestroy Playback Service");
+        super.onDestroy();
+    }
+
+
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        Log.d(TAG, "onTaskRemoved Playback Service");
+        super.onTaskRemoved(rootIntent);
     }
 
     private void cancelExistingTaskIfNecessary() {
@@ -533,6 +554,15 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
     @Override
     public void onEndSendLocation() {
         Log.e(TAG, "onEndSendLocation");
+        if(state == PAUSED) {
+            try {
+                mBinder.pause();
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+            return;
+        }
+
         if (state != STOPPED) {
             // Stop at last point in gpx (speed to zero) before stop service.
             currentPointWorker.setSpeed(0.0);
