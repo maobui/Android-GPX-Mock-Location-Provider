@@ -70,7 +70,7 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
-//    private ServiceConnection connection;
+    //    private ServiceConnection connection;
     private IPlaybackService service;
     private boolean mBound = false;
     private EditText mEditText;
@@ -97,6 +97,13 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
+
+        if (LocationUtil.isMockLocationEnabled(this)) {
+            bindStatusListener();
+            connectToService();
+        } else {
+            showMockLocationSettings();
+        }
 
         mEditText = findViewById(R.id.file_path);
         mImageViewFileManager = findViewById(R.id.file_manager);
@@ -155,18 +162,7 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
     }
 
     @Override
-    protected void onStart() {
-        super.onStart();
-        if (LocationUtil.isMockLocationEnabled(this)) {
-            bindStatusListener();
-            connectToService();
-        } else {
-            showMockLocationSettings();
-        }
-    }
-
-    @Override
-    protected void onStop() {
+    protected void onDestroy() {
         if (receiver != null)
             unregisterReceiver(receiver);
         try {
@@ -174,11 +170,10 @@ public class MainActivity extends AppCompatActivity implements GpsPlaybackListen
                 unbindService(connection);
                 mBound = false;
             }
-        } catch (Exception ie) {
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-
-        super.onStop();
-
+        super.onDestroy();
     }
 
     private void hideProgressDialog() {
