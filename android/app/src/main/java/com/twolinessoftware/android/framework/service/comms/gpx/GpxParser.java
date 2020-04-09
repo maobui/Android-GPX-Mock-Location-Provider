@@ -19,6 +19,8 @@ import com.thoughtworks.xstream.XStream;
 import com.twolinessoftware.android.framework.service.comms.Parser;
 import com.twolinessoftware.android.framework.service.comms.XStreamParser;
 
+import java.io.File;
+
 public class GpxParser extends Parser {
 
 	private GpxParserListener listener;
@@ -54,5 +56,10 @@ public class GpxParser extends Parser {
 				listener.onGpxError(re.getMessage());
 		}
 	}
+
+    @Override
+    public void parseFromFile(File file) {
+
+    }
 
 }

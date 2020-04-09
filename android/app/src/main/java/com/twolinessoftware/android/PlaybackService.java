@@ -37,10 +37,7 @@ import com.twolinessoftware.android.framework.service.comms.gpx.GpxTrackPoint;
 import com.twolinessoftware.android.framework.util.Logger;
 import com.vividsolutions.jts.geom.Coordinate;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -203,7 +200,7 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
                 .build();
         startForeground(1, notification);*/
 
-        if(intent != null && intent.getAction() != null) {
+        if (intent != null && intent.getAction() != null) {
             String action = intent.getAction();
             int status = intent.getIntExtra(STATUS, -1);
             Log.e(TAG, "------------------ " + action + " : " + status);
@@ -285,9 +282,9 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
     }
 
 
-    private void queueGpxPositions(String xml) {
+    private void queueGpxPositions(File file) {
         GpxSaxParser parser = new GpxSaxParser(this);
-        parser.parse(xml);
+        parser.parseFromFile(file);
     }
 
     private void onGpsPlaybackStopped() {
@@ -373,27 +370,10 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
         mNotificationManager.notify(NOTIFICATION_ID, notification);
     }
 
-    private String loadFile(String file) {
-        try {
-            File f = new File(file);
-            FileInputStream fileIS = new FileInputStream(f);
-            BufferedReader buf = new BufferedReader(new InputStreamReader(fileIS));
-            String readString = new String();
-            StringBuffer xml = new StringBuffer();
-            while ((readString = buf.readLine()) != null) {
-                xml.append(readString);
-            }
-            Logger.d(TAG, "Finished reading in file");
-            return xml.toString();
-        } catch (Exception e) {
-            broadcastError("Error in the GPX file, unable to read it");
-        }
-        return null;
-    }
-
 
     @Override
     public void onGpxError(String message) {
+        Logger.e(TAG, "++++++++++++++++++++++++++++" + message);
         broadcastError(message);
     }
 
@@ -409,7 +389,7 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
             try {
-                Date gpsDate = format.parse(item.getTime());
+                Date gpsDate = format.parse(item.getTime() + "Z");
                 gpsPointTime = gpsDate.getTime();
             } catch (ParseException e) {
                 Log.e(TAG, "Unable to parse time:" + item.getTime());
@@ -464,12 +444,12 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
 
     @Override
     public void onGpxStart() {
-        // Start Parsing
+        Logger.i(TAG, "----------------------------------- Start Parsing");
     }
 
     @Override
     public void onGpxEnd() {
-        // End Parsing
+        Logger.i(TAG, "----------------------------------- End Parsing");
     }
 
     private void broadcastStatus(GpsPlaybackBroadcastReceiver.Status status) {
@@ -513,9 +493,10 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
             firstGpsTime = 0;
             startTimeOffset = 0;
 
-            String xml = loadFile(file);
+            queueGpxPositions(new File(file));
+            Log.e(TAG, " queueGpxPositions done");
+
             publishProgress(1);
-            queueGpxPositions(xml);
             return null;
         }
 
@@ -554,7 +535,7 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
     @Override
     public void onEndSendLocation() {
         Log.e(TAG, "onEndSendLocation");
-        if(state == PAUSED) {
+        if (state == PAUSED) {
             try {
                 mBinder.pause();
             } catch (RemoteException e) {
@@ -565,10 +546,11 @@ public class PlaybackService extends Service implements GpxSaxParserListener, Se
 
         if (state != STOPPED) {
             // Stop at last point in gpx (speed to zero) before stop service.
-            currentPointWorker.setSpeed(0.0);
-            SendLocationWorker worker = new SendLocationWorker(mLocationManager, currentPointWorker, PROVIDER_NAME, System.currentTimeMillis());
-            worker.run();
-
+            if (currentPointWorker != null) {
+                currentPointWorker.setSpeed(0.0);
+                SendLocationWorker worker = new SendLocationWorker(mLocationManager, currentPointWorker, PROVIDER_NAME, System.currentTimeMillis());
+                worker.run();
+            }
             try {
                 mBinder.stopService();
             } catch (RemoteException e) {

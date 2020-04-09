@@ -15,6 +15,7 @@
  */
 package com.twolinessoftware.android.framework.service.comms;
 
+import java.io.File;
 import java.io.StringReader;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -28,6 +29,8 @@ public abstract class Parser {
 	private static final String LOGNAME = "Framework.Parser";
 
 	public abstract void parse(String xml);
+
+	public abstract void parseFromFile(File file);
 
 	protected XmlPullParser buildXmlParser(String xml)
 			throws XmlPullParserException {
